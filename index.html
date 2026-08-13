@@ -1,0 +1,1007 @@
+import React, { useState, useMemo } from "react";
+import {
+  LayoutDashboard, Users, ClipboardList, CalendarClock, DoorOpen, Bell,
+  TrendingUp, Search, ChevronRight, ChevronLeft, Plus, X, Check, Clock,
+  Phone, MapPin, Leaf, Activity, LogOut, Menu, AlertTriangle, Info,
+  CheckCircle2, User, Stethoscope, Droplet, Wind, Flame, Mountain,
+} from "lucide-react";
+import {
+  ResponsiveContainer, LineChart, Line, CartesianGrid, XAxis, YAxis,
+  Tooltip, BarChart, Bar, Legend,
+} from "recharts";
+
+/* ============================== DESIGN TOKENS ==============================
+   Palette
+   - ink        #16302C  (near-black teal, primary text)
+   - paper      #F6F8F6  (cool sage-tinted off-white background)
+   - surface    #FFFFFF  (cards)
+   - teal-900   #0A3D38  (sidebar / deep brand)
+   - teal-600   #0F5C55  (primary actions)
+   - teal-100   #DCEBE7  (soft tints)
+   - gold       #C8963D  (accent — used sparingly, e.g. highlights/CTAs)
+   Tridosha signature colors (used for the ring motif + status coding):
+   - vata  (air/space)  #7C8FC4
+   - pitta (fire/water) #C1622E
+   - kapha (earth/water) #6E9B7A
+   Typography: "Fraunces" (display serif, headings) + "Inter" (UI/body) +
+   "JetBrains Mono" (ids, timestamps, numerics)
+   Signature element: the Tridosha Ring — a three-arc circular motif used as
+   the brand mark, per-patient constitution readout, and progress indicator.
+=============================================================================*/
+
+const FONTS_LINK = "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap";
+
+const DOSHA = {
+  vata: { color: "#7C8FC4", label: "Vata", icon: Wind, sub: "Air · Space" },
+  pitta: { color: "#C1622E", label: "Pitta", icon: Flame, sub: "Fire · Water" },
+  kapha: { color: "#6E9B7A", label: "Kapha", icon: Mountain, sub: "Earth · Water" },
+};
+
+/* ================================ DEMO DATA ================================ */
+
+const PATIENTS = [
+  { id: "P-1042", name: "Ananya Rao", age: 34, gender: "Female", phone: "+91 98450 21134", dosha: { vata: 55, pitta: 25, kapha: 20 }, condition: "Chronic lower back pain (Vata imbalance)", plan: "Basti Chikitsa — 14 Day", status: "Active", admitted: "2026-07-28", doctor: "Dr. Meera Nair", avatarColor: "#7C8FC4" },
+  { id: "P-1043", name: "Rohan Bhatt", age: 41, gender: "Male", phone: "+91 90210 44821", dosha: { vata: 20, pitta: 60, kapha: 20 }, condition: "Chronic migraine, acid reflux (Pitta excess)", plan: "Virechana — 10 Day", status: "Active", admitted: "2026-08-01", doctor: "Dr. Arvind Kulkarni", avatarColor: "#C1622E" },
+  { id: "P-1044", name: "Kavita Iyer", age: 52, gender: "Female", phone: "+91 88991 20033", dosha: { vata: 25, pitta: 20, kapha: 55 }, condition: "Obesity, joint stiffness (Kapha excess)", plan: "Udvartana + Swedana — 21 Day", status: "Active", admitted: "2026-07-20", doctor: "Dr. Meera Nair", avatarColor: "#6E9B7A" },
+  { id: "P-1045", name: "Siddharth Menon", age: 29, gender: "Male", phone: "+91 99001 55210", dosha: { vata: 45, pitta: 40, kapha: 15 }, condition: "Insomnia, work-related stress", plan: "Shirodhara — 7 Day", status: "Scheduled", admitted: "2026-08-14", doctor: "Dr. Arvind Kulkarni", avatarColor: "#7C8FC4" },
+  { id: "P-1046", name: "Priya Deshmukh", age: 47, gender: "Female", phone: "+91 97654 33221", dosha: { vata: 30, pitta: 50, kapha: 20 }, condition: "Psoriasis flare-up (Pitta / blood)", plan: "Raktamokshana — 5 Day", status: "Active", admitted: "2026-08-05", doctor: "Dr. Sana Fernandes", avatarColor: "#C1622E" },
+  { id: "P-1047", name: "Vikram Chauhan", age: 60, gender: "Male", phone: "+91 96432 87654", dosha: { vata: 60, pitta: 15, kapha: 25 }, condition: "Osteoarthritis, joint degeneration", plan: "Nasya + Abhyanga — 14 Day", status: "Active", admitted: "2026-07-15", doctor: "Dr. Sana Fernandes", avatarColor: "#7C8FC4" },
+  { id: "P-1048", name: "Neha Kapoor", age: 38, gender: "Female", phone: "+91 93211 76540", dosha: { vata: 35, pitta: 35, kapha: 30 }, condition: "Post-natal recovery, fatigue", plan: "Abhyanga + Basti — 10 Day", status: "Completed", admitted: "2026-06-10", doctor: "Dr. Meera Nair", avatarColor: "#6E9B7A" },
+  { id: "P-1049", name: "Arjun Verma", age: 45, gender: "Male", phone: "+91 90099 12345", dosha: { vata: 20, pitta: 30, kapha: 50 }, condition: "Sinusitis, respiratory congestion", plan: "Vamana — 7 Day", status: "Completed", admitted: "2026-06-02", doctor: "Dr. Arvind Kulkarni", avatarColor: "#6E9B7A" },
+];
+
+const THERAPISTS = [
+  { id: "T-01", name: "Dr. Meera Nair", specialty: "Panchakarma Lead", status: "In Session", today: 4, avatarColor: "#0F5C55" },
+  { id: "T-02", name: "Dr. Arvind Kulkarni", specialty: "Virechana & Vamana", status: "Available", today: 2, avatarColor: "#C1622E" },
+  { id: "T-03", name: "Dr. Sana Fernandes", specialty: "Marma & Abhyanga", status: "Available", today: 3, avatarColor: "#6E9B7A" },
+  { id: "T-04", name: "Ramesh Pillai", specialty: "Therapist — Swedana", status: "On Break", today: 3, avatarColor: "#7C8FC4" },
+  { id: "T-05", name: "Lakshmi Menon", specialty: "Therapist — Shirodhara", status: "In Session", today: 5, avatarColor: "#C8963D" },
+  { id: "T-06", name: "Suresh Nambiar", specialty: "Therapist — Udvartana", status: "Available", today: 2, avatarColor: "#7C8FC4" },
+];
+
+const ROOMS = [
+  { id: "R-1", name: "Panchakarma Suite A", type: "Basti / Virechana", status: "Occupied", equipment: "Droni table, steam unit" },
+  { id: "R-2", name: "Panchakarma Suite B", type: "Vamana / Nasya", status: "Available", equipment: "Droni table, herbal steam" },
+  { id: "R-3", name: "Shirodhara Room", type: "Shirodhara", status: "Occupied", equipment: "Dhara stand, oil warmer" },
+  { id: "R-4", name: "Abhyanga Hall 1", type: "Abhyanga / Udvartana", status: "Available", equipment: "2 massage tables" },
+  { id: "R-5", name: "Abhyanga Hall 2", type: "Abhyanga / Udvartana", status: "Cleaning", equipment: "2 massage tables" },
+  { id: "R-6", name: "Consultation Room", type: "Assessment", status: "Available", equipment: "Pulse diagnosis station" },
+];
+
+const THERAPY_PLANS = [
+  { id: "TP-1", name: "Vamana", sanskrit: "वमन", category: "Shodhana (Purification)", description: "Therapeutic emesis to clear excess Kapha from the upper GI tract.", duration: "7 days", sessions: 5, indications: "Respiratory congestion, sinusitis, Kapha disorders" },
+  { id: "TP-2", name: "Virechana", sanskrit: "विरेचन", category: "Shodhana (Purification)", description: "Purgation therapy to eliminate excess Pitta via the bowel.", duration: "10 days", sessions: 7, indications: "Skin disorders, chronic acidity, migraine" },
+  { id: "TP-3", name: "Basti", sanskrit: "बस्ति", category: "Shodhana (Purification)", description: "Medicated enema series, considered the primary therapy for Vata disorders.", duration: "14 days", sessions: 10, indications: "Joint pain, lower back pain, neurological conditions" },
+  { id: "TP-4", name: "Nasya", sanskrit: "नस्य", category: "Shodhana (Purification)", description: "Nasal instillation of medicated oils to clear the head and neck region.", duration: "7 days", sessions: 7, indications: "Sinusitis, headaches, cervical stiffness" },
+  { id: "TP-5", name: "Raktamokshana", sanskrit: "रक्तमोक्षण", category: "Shodhana (Purification)", description: "Controlled bloodletting to purify blood tissue.", duration: "5 days", sessions: 3, indications: "Skin disease, localized inflammation" },
+  { id: "TP-6", name: "Abhyanga", sanskrit: "अभ्यंग", category: "Purvakarma (Preparatory)", description: "Full-body warm oil massage to loosen toxins before Shodhana.", duration: "Ongoing", sessions: 1, indications: "General preparation, stress, fatigue" },
+  { id: "TP-7", name: "Swedana", sanskrit: "स्वेदन", category: "Purvakarma (Preparatory)", description: "Herbal steam therapy that follows Abhyanga to open channels.", duration: "Ongoing", sessions: 1, indications: "Stiffness, preparation for purification" },
+  { id: "TP-8", name: "Shirodhara", sanskrit: "शिरोधारा", category: "Specialized", description: "Continuous stream of warm oil poured over the forehead.", duration: "7 days", sessions: 7, indications: "Insomnia, anxiety, stress-related disorders" },
+];
+
+const todayStr = "2026-08-13";
+const SCHEDULE = [
+  { id: "S-201", time: "08:00", patient: "Ananya Rao", patientId: "P-1042", therapy: "Basti", therapist: "Dr. Meera Nair", room: "Panchakarma Suite A", status: "Completed" },
+  { id: "S-202", time: "09:00", patient: "Vikram Chauhan", patientId: "P-1047", therapist: "Suresh Nambiar", therapy: "Abhyanga", room: "Abhyanga Hall 1", status: "Completed" },
+  { id: "S-203", time: "10:00", patient: "Rohan Bhatt", patientId: "P-1043", therapy: "Virechana", therapist: "Dr. Arvind Kulkarni", room: "Panchakarma Suite A", status: "In Progress" },
+  { id: "S-204", time: "10:30", patient: "Kavita Iyer", patientId: "P-1044", therapy: "Udvartana", therapist: "Suresh Nambiar", room: "Abhyanga Hall 2", status: "In Progress" },
+  { id: "S-205", time: "11:00", patient: "Neha Kapoor", patientId: "P-1048", therapy: "Shirodhara", therapist: "Lakshmi Menon", room: "Shirodhara Room", status: "Upcoming" },
+  { id: "S-206", time: "12:30", patient: "Priya Deshmukh", patientId: "P-1046", therapy: "Raktamokshana", therapist: "Dr. Sana Fernandes", room: "Panchakarma Suite B", status: "Upcoming" },
+  { id: "S-207", time: "14:00", patient: "Vikram Chauhan", patientId: "P-1047", therapy: "Nasya", therapist: "Dr. Sana Fernandes", room: "Panchakarma Suite B", status: "Upcoming" },
+  { id: "S-208", time: "15:30", patient: "Ananya Rao", patientId: "P-1042", therapy: "Basti", therapist: "Dr. Meera Nair", room: "Panchakarma Suite A", status: "Upcoming" },
+];
+
+const WEEK_VOLUME = [
+  { day: "Mon", sessions: 18 }, { day: "Tue", sessions: 22 }, { day: "Wed", sessions: 19 },
+  { day: "Thu", sessions: 24 }, { day: "Fri", sessions: 21 }, { day: "Sat", sessions: 14 }, { day: "Sun", sessions: 6 },
+];
+
+const NOTIFICATIONS = [
+  { id: "N-1", type: "reminder", title: "Basti session in 30 minutes", body: "Ananya Rao (P-1042) — Panchakarma Suite A, 15:30 with Dr. Meera Nair.", time: "10 min ago", read: false },
+  { id: "N-2", type: "alert", title: "Room cleaning overdue", body: "Abhyanga Hall 2 has exceeded scheduled cleaning window by 15 minutes.", time: "18 min ago", read: false },
+  { id: "N-3", type: "info", title: "Pre-procedure diet confirmed", body: "Rohan Bhatt has followed the prescribed Virechana pre-procedure diet for 3 consecutive days.", time: "1 hr ago", read: false },
+  { id: "N-4", type: "alert", title: "Vitals flagged", body: "Priya Deshmukh reported mild dizziness post-Raktamokshana. Reviewed by Dr. Sana Fernandes.", time: "2 hr ago", read: true },
+  { id: "N-5", type: "reminder", title: "Follow-up assessment due", body: "Vikram Chauhan is due for a 14-day progress assessment tomorrow.", time: "3 hr ago", read: true },
+  { id: "N-6", type: "info", title: "New patient onboarded", body: "Siddharth Menon scheduled to begin Shirodhara — 7 Day plan on Aug 14.", time: "5 hr ago", read: true },
+];
+
+const PROGRESS = {
+  "P-1042": [
+    { day: "Day 1", pain: 8, mobility: 3, sleep: 4 }, { day: "Day 4", pain: 7, mobility: 4, sleep: 5 },
+    { day: "Day 7", pain: 6, mobility: 5, sleep: 5 }, { day: "Day 10", pain: 4, mobility: 6, sleep: 6 },
+    { day: "Day 13", pain: 3, mobility: 7, sleep: 7 },
+  ],
+  "P-1043": [
+    { day: "Day 1", pain: 7, mobility: 6, sleep: 3 }, { day: "Day 3", pain: 6, mobility: 6, sleep: 4 },
+    { day: "Day 6", pain: 5, mobility: 7, sleep: 5 }, { day: "Day 9", pain: 3, mobility: 8, sleep: 6 },
+  ],
+  "P-1044": [
+    { day: "Day 1", pain: 5, mobility: 3, sleep: 5 }, { day: "Day 5", pain: 5, mobility: 4, sleep: 5 },
+    { day: "Day 10", pain: 4, mobility: 5, sleep: 6 }, { day: "Day 15", pain: 3, mobility: 6, sleep: 6 },
+    { day: "Day 20", pain: 2, mobility: 7, sleep: 7 },
+  ],
+  default: [
+    { day: "Day 1", pain: 6, mobility: 4, sleep: 4 }, { day: "Day 4", pain: 5, mobility: 5, sleep: 5 },
+    { day: "Day 7", pain: 4, mobility: 6, sleep: 6 },
+  ],
+};
+
+/* ============================== SMALL PRIMITIVES ============================== */
+
+function DoshaRing({ dosha, size = 56, strokeWidth = 7 }) {
+  const r = (size - strokeWidth) / 2;
+  const c = 2 * Math.PI * r;
+  const segs = [
+    { key: "vata", val: dosha.vata }, { key: "pitta", val: dosha.pitta }, { key: "kapha", val: dosha.kapha },
+  ];
+  let offset = 0;
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="shrink-0">
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#E7ECE9" strokeWidth={strokeWidth} />
+      {segs.map((s) => {
+        const len = (s.val / 100) * c;
+        const dash = `${len} ${c - len}`;
+        const rotation = (offset / 100) * 360 - 90;
+        offset += s.val;
+        return (
+          <circle key={s.key} cx={size / 2} cy={size / 2} r={r} fill="none" stroke={DOSHA[s.key].color}
+            strokeWidth={strokeWidth} strokeDasharray={dash} strokeLinecap="butt"
+            transform={`rotate(${rotation} ${size / 2} ${size / 2})`} />
+        );
+      })}
+    </svg>
+  );
+}
+
+function Logo({ compact }) {
+  return (
+    <div className="flex items-center gap-2.5">
+      <DoshaRing dosha={{ vata: 34, pitta: 33, kapha: 33 }} size={30} strokeWidth={4.5} />
+      {!compact && (
+        <span className="font-[Fraunces] text-[19px] tracking-tight text-white leading-none">
+          Ayur<span className="font-normal italic text-[#C8963D]">Sutra</span>
+        </span>
+      )}
+    </div>
+  );
+}
+
+function StatusPill({ status }) {
+  const map = {
+    Active: "bg-[#DCEBE7] text-[#0F5C55]",
+    Scheduled: "bg-[#EFE6D2] text-[#8A6A22]",
+    Completed: "bg-[#E9ECEA] text-[#5A6663]",
+    Available: "bg-[#DCEBE7] text-[#0F5C55]",
+    "In Session": "bg-[#EFE6D2] text-[#8A6A22]",
+    "On Break": "bg-[#E9ECEA] text-[#5A6663]",
+    Occupied: "bg-[#F3DCD3] text-[#9C4423]",
+    Cleaning: "bg-[#E9ECEA] text-[#5A6663]",
+    "In Progress": "bg-[#EFE6D2] text-[#8A6A22]",
+    Upcoming: "bg-[#E3E8F2] text-[#3F4F8C]",
+  };
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${map[status] || "bg-gray-100 text-gray-600"}`}>
+      <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
+      {status}
+    </span>
+  );
+}
+
+function Card({ children, className = "", padded = true }) {
+  return (
+    <div className={`rounded-2xl border border-[#E4E9E6] bg-white shadow-[0_1px_2px_rgba(16,48,44,0.04)] ${padded ? "p-5" : ""} ${className}`}>
+      {children}
+    </div>
+  );
+}
+
+function SectionTitle({ eyebrow, title, action }) {
+  return (
+    <div className="flex items-end justify-between mb-4">
+      <div>
+        {eyebrow && <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#0F5C55]/70 mb-1">{eyebrow}</div>}
+        <h2 className="font-[Fraunces] text-[22px] text-[#16302C]">{title}</h2>
+      </div>
+      {action}
+    </div>
+  );
+}
+
+/* ================================== LOGIN ================================== */
+
+function LoginPage({ onLogin }) {
+  const [role, setRole] = useState("doctor");
+  const [email, setEmail] = useState("meera.nair@ayursutra.clinic");
+  const [password, setPassword] = useState("••••••••");
+
+  return (
+    <div className="min-h-screen w-full bg-[#0A3D38] flex items-center justify-center p-6 relative overflow-hidden">
+      <div className="absolute -top-32 -left-32 w-[420px] h-[420px] rounded-full opacity-20" style={{ background: "radial-gradient(circle, #7C8FC4 0%, transparent 70%)" }} />
+      <div className="absolute -bottom-40 -right-24 w-[460px] h-[460px] rounded-full opacity-20" style={{ background: "radial-gradient(circle, #C1622E 0%, transparent 70%)" }} />
+      <div className="absolute top-1/3 right-1/4 w-[300px] h-[300px] rounded-full opacity-10" style={{ background: "radial-gradient(circle, #6E9B7A 0%, transparent 70%)" }} />
+
+      <div className="relative w-full max-w-[960px] grid md:grid-cols-2 rounded-[28px] overflow-hidden shadow-2xl">
+        {/* Left brand panel */}
+        <div className="hidden md:flex flex-col justify-between bg-[#0F5C55] p-10 relative">
+          <Logo />
+          <div>
+            <div className="mb-6"><DoshaRing dosha={{ vata: 40, pitta: 30, kapha: 30 }} size={84} strokeWidth={9} /></div>
+            <h1 className="font-[Fraunces] text-[34px] leading-[1.15] text-white mb-3">
+              Panchakarma care,<br />orchestrated precisely.
+            </h1>
+            <p className="text-[#DCEBE7] text-[14.5px] leading-relaxed max-w-[360px]">
+              Patient intake, dosha-aware therapy plans, therapist &amp; room scheduling,
+              and recovery tracking — in one clinical workspace.
+            </p>
+          </div>
+          <div className="flex gap-6 text-[#DCEBE7]/80 text-[12px] font-[JetBrains_Mono]">
+            <span>9 THERAPY PROTOCOLS</span>
+            <span>6 PRACTITIONERS</span>
+            <span>REAL-TIME ROOMS</span>
+          </div>
+        </div>
+
+        {/* Right form panel */}
+        <div className="bg-[#FBFAF7] p-10 flex flex-col justify-center">
+          <div className="md:hidden mb-8"><Logo /></div>
+          <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#0F5C55]/70 mb-2">Welcome back</div>
+          <h2 className="font-[Fraunces] text-[26px] text-[#16302C] mb-1">Sign in to AyurSutra</h2>
+          <p className="text-[#5A6663] text-[13.5px] mb-7">Demo prototype — any credentials will work.</p>
+
+          <div className="flex rounded-xl bg-[#EEF1EF] p-1 mb-6 text-[13px] font-medium">
+            {["doctor", "admin"].map((r) => (
+              <button key={r} onClick={() => setRole(r)}
+                className={`flex-1 rounded-lg py-2 capitalize transition-colors ${role === r ? "bg-white text-[#0F5C55] shadow-sm" : "text-[#5A6663]"}`}>
+                {r === "doctor" ? "Practitioner" : "Front Desk / Admin"}
+              </button>
+            ))}
+          </div>
+
+          <form onSubmit={(e) => { e.preventDefault(); onLogin(role); }} className="space-y-4">
+            <div>
+              <label className="block text-[12.5px] font-medium text-[#3A4644] mb-1.5">Email</label>
+              <input value={email} onChange={(e) => setEmail(e.target.value)} type="text"
+                className="w-full rounded-xl border border-[#DCE3DF] bg-white px-3.5 py-2.5 text-[14px] text-[#16302C] outline-none focus:border-[#0F5C55] focus:ring-2 focus:ring-[#0F5C55]/15" />
+            </div>
+            <div>
+              <label className="block text-[12.5px] font-medium text-[#3A4644] mb-1.5">Password</label>
+              <input value={password} onChange={(e) => setPassword(e.target.value)} type="password"
+                className="w-full rounded-xl border border-[#DCE3DF] bg-white px-3.5 py-2.5 text-[14px] text-[#16302C] outline-none focus:border-[#0F5C55] focus:ring-2 focus:ring-[#0F5C55]/15" />
+            </div>
+            <button type="submit"
+              className="w-full rounded-xl bg-[#0F5C55] text-white text-[14px] font-semibold py-2.75 py-[11px] hover:bg-[#0A413C] transition-colors flex items-center justify-center gap-2">
+              Sign in <ChevronRight size={16} />
+            </button>
+          </form>
+          <p className="text-[11.5px] text-[#8A9490] mt-6 text-center">AyurSutra Clinical Suite · Demo data only · Hackathon build</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ================================ APP SHELL ================================ */
+
+const NAV = [
+  { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { key: "patients", label: "Patients", icon: Users },
+  { key: "plans", label: "Therapy Plans", icon: ClipboardList },
+  { key: "scheduling", label: "Scheduling", icon: CalendarClock },
+  { key: "resources", label: "Therapists & Rooms", icon: DoorOpen },
+  { key: "notifications", label: "Notifications", icon: Bell },
+  { key: "progress", label: "Progress Tracking", icon: TrendingUp },
+];
+
+function Sidebar({ view, setView, onLogout, mobileOpen, setMobileOpen, unread }) {
+  return (
+    <>
+      {mobileOpen && <div className="fixed inset-0 bg-black/40 z-30 md:hidden" onClick={() => setMobileOpen(false)} />}
+      <aside className={`fixed md:static z-40 md:z-auto top-0 left-0 h-full w-[248px] bg-[#0A3D38] flex flex-col transition-transform duration-200 ${mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}>
+        <div className="px-5 py-6 border-b border-white/10">
+          <Logo />
+        </div>
+        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+          {NAV.map((item) => {
+            const Icon = item.icon;
+            const active = view === item.key;
+            return (
+              <button key={item.key} onClick={() => { setView(item.key); setMobileOpen(false); }}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13.5px] font-medium transition-colors relative ${active ? "bg-white/10 text-white" : "text-[#B7CBC6] hover:bg-white/5 hover:text-white"}`}>
+                <Icon size={17} strokeWidth={2} />
+                {item.label}
+                {item.key === "notifications" && unread > 0 && (
+                  <span className="ml-auto min-w-[18px] h-[18px] px-1 rounded-full bg-[#C8963D] text-[#0A3D38] text-[10px] font-bold flex items-center justify-center">{unread}</span>
+                )}
+                {active && <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-r bg-[#C8963D]" />}
+              </button>
+            );
+          })}
+        </nav>
+        <div className="p-3 border-t border-white/10">
+          <button onClick={onLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13.5px] font-medium text-[#B7CBC6] hover:bg-white/5 hover:text-white transition-colors">
+            <LogOut size={17} /> Sign out
+          </button>
+        </div>
+      </aside>
+    </>
+  );
+}
+
+function TopBar({ title, subtitle, onMenu, user, unread, setView }) {
+  return (
+    <div className="sticky top-0 z-20 bg-[#FBFAF7]/90 backdrop-blur border-b border-[#E4E9E6] px-5 md:px-8 py-4 flex items-center justify-between gap-4">
+      <div className="flex items-center gap-3 min-w-0">
+        <button className="md:hidden p-1.5 -ml-1.5 rounded-lg hover:bg-black/5" onClick={onMenu}><Menu size={20} className="text-[#16302C]" /></button>
+        <div className="min-w-0">
+          <h1 className="font-[Fraunces] text-[20px] md:text-[22px] text-[#16302C] leading-tight truncate">{title}</h1>
+          {subtitle && <p className="text-[12.5px] text-[#5A6663] truncate">{subtitle}</p>}
+        </div>
+      </div>
+      <div className="flex items-center gap-3 shrink-0">
+        <button onClick={() => setView("notifications")} className="relative p-2 rounded-full hover:bg-black/5">
+          <Bell size={18} className="text-[#16302C]" />
+          {unread > 0 && <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-[#C1622E] ring-2 ring-[#FBFAF7]" />}
+        </button>
+        <div className="flex items-center gap-2.5 pl-3 border-l border-[#E4E9E6]">
+          <div className="h-8 w-8 rounded-full bg-[#0F5C55] text-white text-[12px] font-semibold flex items-center justify-center">{user.initials}</div>
+          <div className="hidden sm:block leading-tight">
+            <div className="text-[13px] font-semibold text-[#16302C]">{user.name}</div>
+            <div className="text-[11px] text-[#5A6663]">{user.role}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* =============================== DASHBOARD =============================== */
+
+function Dashboard({ setView, openPatient }) {
+  const activeCount = PATIENTS.filter((p) => p.status === "Active").length;
+  const todaysSessions = SCHEDULE.length;
+  const availableTherapists = THERAPISTS.filter((t) => t.status === "Available").length;
+  const occupiedRooms = ROOMS.filter((r) => r.status === "Occupied").length;
+
+  const stats = [
+    { label: "Active Patients", value: activeCount, icon: Users, tint: "#0F5C55", bg: "#DCEBE7" },
+    { label: "Sessions Today", value: todaysSessions, icon: CalendarClock, tint: "#8A6A22", bg: "#EFE6D2" },
+    { label: "Therapists Available", value: `${availableTherapists}/${THERAPISTS.length}`, icon: Stethoscope, tint: "#3F4F8C", bg: "#E3E8F2" },
+    { label: "Rooms Occupied", value: `${occupiedRooms}/${ROOMS.length}`, icon: DoorOpen, tint: "#9C4423", bg: "#F3DCD3" },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {stats.map((s) => {
+          const Icon = s.icon;
+          return (
+            <Card key={s.label}>
+              <div className="flex items-center justify-between mb-3">
+                <div className="h-9 w-9 rounded-xl flex items-center justify-center" style={{ background: s.bg }}>
+                  <Icon size={17} style={{ color: s.tint }} />
+                </div>
+              </div>
+              <div className="font-[Fraunces] text-[26px] text-[#16302C] leading-none mb-1">{s.value}</div>
+              <div className="text-[12.5px] text-[#5A6663]">{s.label}</div>
+            </Card>
+          );
+        })}
+      </div>
+
+      <div className="grid lg:grid-cols-5 gap-6">
+        <Card className="lg:col-span-3" padded={false}>
+          <div className="p-5 pb-0 flex items-center justify-between">
+            <SectionTitle eyebrow="Live Board" title="Today's Schedule" />
+            <button onClick={() => setView("scheduling")} className="text-[12.5px] font-semibold text-[#0F5C55] flex items-center gap-1 hover:underline mb-4">
+              Full calendar <ChevronRight size={14} />
+            </button>
+          </div>
+          <div className="divide-y divide-[#EEF1EF] max-h-[380px] overflow-y-auto">
+            {SCHEDULE.map((s) => (
+              <button key={s.id} onClick={() => openPatient(s.patientId)}
+                className="w-full flex items-center gap-4 px-5 py-3 hover:bg-[#F6F8F6] text-left transition-colors">
+                <div className="w-14 shrink-0 font-[JetBrains_Mono] text-[12px] text-[#5A6663]">{s.time}</div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[13.5px] font-semibold text-[#16302C] truncate">{s.patient}</div>
+                  <div className="text-[12px] text-[#5A6663] truncate">{s.therapy} · {s.therapist} · {s.room}</div>
+                </div>
+                <StatusPill status={s.status} />
+              </button>
+            ))}
+          </div>
+        </Card>
+
+        <Card className="lg:col-span-2">
+          <SectionTitle eyebrow="This Week" title="Session Volume" />
+          <div className="h-[260px] -ml-3">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={WEEK_VOLUME}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E4E9E6" />
+                <XAxis dataKey="day" tick={{ fontSize: 12, fill: "#5A6663" }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 12, fill: "#5A6663" }} axisLine={false} tickLine={false} width={28} />
+                <Tooltip contentStyle={{ borderRadius: 10, border: "1px solid #E4E9E6", fontSize: 12.5 }} cursor={{ fill: "#F6F8F6" }} />
+                <Bar dataKey="sessions" fill="#0F5C55" radius={[6, 6, 0, 0]} maxBarSize={28} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+      </div>
+
+      <Card padded={false}>
+        <div className="p-5 pb-0 flex items-center justify-between">
+          <SectionTitle eyebrow="Recent" title="Notifications" />
+          <button onClick={() => setView("notifications")} className="text-[12.5px] font-semibold text-[#0F5C55] flex items-center gap-1 hover:underline mb-4">
+            View all <ChevronRight size={14} />
+          </button>
+        </div>
+        <div className="divide-y divide-[#EEF1EF]">
+          {NOTIFICATIONS.slice(0, 3).map((n) => <NotificationRow key={n.id} n={n} />)}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+/* =============================== PATIENTS =============================== */
+
+function PatientsList({ openPatient }) {
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState("All");
+
+  const filtered = useMemo(() => {
+    return PATIENTS.filter((p) => {
+      const matchesQuery = (p.name + p.id + p.condition).toLowerCase().includes(query.toLowerCase());
+      const matchesFilter = filter === "All" || p.status === filter;
+      return matchesQuery && matchesFilter;
+    });
+  }, [query, filter]);
+
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+        <div className="relative flex-1 max-w-[360px]">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8A9490]" />
+          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search patients, ID, or condition…"
+            className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#DCE3DF] bg-white text-[13.5px] outline-none focus:border-[#0F5C55] focus:ring-2 focus:ring-[#0F5C55]/15" />
+        </div>
+        <div className="flex items-center gap-2">
+          {["All", "Active", "Scheduled", "Completed"].map((f) => (
+            <button key={f} onClick={() => setFilter(f)}
+              className={`px-3 py-1.5 rounded-full text-[12.5px] font-medium border transition-colors ${filter === f ? "bg-[#0F5C55] text-white border-[#0F5C55]" : "bg-white text-[#5A6663] border-[#DCE3DF] hover:border-[#0F5C55]/40"}`}>
+              {f}
+            </button>
+          ))}
+          <button className="ml-1 flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#C8963D] text-white text-[12.5px] font-semibold hover:bg-[#B3852F] transition-colors">
+            <Plus size={15} /> New Patient
+          </button>
+        </div>
+      </div>
+
+      <Card padded={false} className="overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-[13.5px]">
+            <thead>
+              <tr className="border-b border-[#E4E9E6] text-left text-[11.5px] uppercase tracking-wide text-[#8A9490]">
+                <th className="px-5 py-3 font-semibold">Patient</th>
+                <th className="px-5 py-3 font-semibold">Constitution</th>
+                <th className="px-5 py-3 font-semibold">Condition</th>
+                <th className="px-5 py-3 font-semibold">Therapy Plan</th>
+                <th className="px-5 py-3 font-semibold">Practitioner</th>
+                <th className="px-5 py-3 font-semibold">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#EEF1EF]">
+              {filtered.map((p) => (
+                <tr key={p.id} onClick={() => openPatient(p.id)} className="cursor-pointer hover:bg-[#F6F8F6] transition-colors">
+                  <td className="px-5 py-3.5">
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded-full text-white text-[11px] font-semibold flex items-center justify-center shrink-0" style={{ background: p.avatarColor }}>
+                        {p.name.split(" ").map((n) => n[0]).join("")}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="font-semibold text-[#16302C] truncate">{p.name}</div>
+                        <div className="text-[11.5px] text-[#8A9490] font-[JetBrains_Mono]">{p.id} · {p.age} · {p.gender}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-5 py-3.5"><DoshaRing dosha={p.dosha} size={30} strokeWidth={4.5} /></td>
+                  <td className="px-5 py-3.5 text-[#3A4644] max-w-[220px] truncate">{p.condition}</td>
+                  <td className="px-5 py-3.5 text-[#3A4644]">{p.plan}</td>
+                  <td className="px-5 py-3.5 text-[#3A4644]">{p.doctor}</td>
+                  <td className="px-5 py-3.5"><StatusPill status={p.status} /></td>
+                </tr>
+              ))}
+              {filtered.length === 0 && (
+                <tr><td colSpan={6} className="px-5 py-10 text-center text-[#8A9490]">No patients match this search.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+function PatientProfile({ patientId, back }) {
+  const p = PATIENTS.find((x) => x.id === patientId) || PATIENTS[0];
+  const sessions = SCHEDULE.filter((s) => s.patientId === p.id);
+  const data = PROGRESS[p.id] || PROGRESS.default;
+  const doshaSorted = Object.entries(p.dosha).sort((a, b) => b[1] - a[1]);
+
+  return (
+    <div className="space-y-6">
+      <button onClick={back} className="flex items-center gap-1.5 text-[13px] font-medium text-[#0F5C55] hover:underline">
+        <ChevronLeft size={16} /> Back to patients
+      </button>
+
+      <Card>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-5">
+          <div className="h-16 w-16 rounded-full text-white text-[18px] font-semibold flex items-center justify-center shrink-0" style={{ background: p.avatarColor }}>
+            {p.name.split(" ").map((n) => n[0]).join("")}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-2 mb-1">
+              <h2 className="font-[Fraunces] text-[22px] text-[#16302C]">{p.name}</h2>
+              <StatusPill status={p.status} />
+            </div>
+            <p className="text-[13px] text-[#5A6663] mb-2">{p.condition}</p>
+            <div className="flex flex-wrap gap-x-5 gap-y-1 text-[12.5px] text-[#5A6663]">
+              <span className="font-[JetBrains_Mono]">{p.id}</span>
+              <span>{p.age} yrs · {p.gender}</span>
+              <span className="flex items-center gap-1"><Phone size={12} /> {p.phone}</span>
+              <span>Admitted {p.admitted}</span>
+              <span>Attending: {p.doctor}</span>
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      <div className="grid lg:grid-cols-3 gap-6">
+        <Card>
+          <SectionTitle eyebrow="Prakriti" title="Constitution" />
+          <div className="flex items-center gap-4 mb-4">
+            <DoshaRing dosha={p.dosha} size={72} strokeWidth={9} />
+            <div className="space-y-1.5">
+              {doshaSorted.map(([key, val]) => {
+                const D = DOSHA[key];
+                return (
+                  <div key={key} className="flex items-center gap-2 text-[12.5px]">
+                    <span className="h-2 w-2 rounded-full" style={{ background: D.color }} />
+                    <span className="font-medium text-[#16302C]">{D.label}</span>
+                    <span className="text-[#8A9490] font-[JetBrains_Mono]">{val}%</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          <p className="text-[12px] text-[#5A6663] leading-relaxed">
+            Dominant dosha: <span className="font-semibold text-[#16302C]">{DOSHA[doshaSorted[0][0]].label}</span> ({DOSHA[doshaSorted[0][0]].sub}) — therapy plan selected to pacify this dosha first.
+          </p>
+        </Card>
+
+        <Card className="lg:col-span-2">
+          <SectionTitle eyebrow="Active Protocol" title={p.plan} />
+          <div className="flex flex-wrap gap-2 mb-4">
+            <span className="text-[11.5px] font-medium bg-[#DCEBE7] text-[#0F5C55] px-2.5 py-1 rounded-full">Panchakarma · Shodhana</span>
+          </div>
+          <p className="text-[13px] text-[#3A4644] leading-relaxed mb-4">
+            Structured multi-day protocol combining preparatory oleation, the primary purification
+            therapy, and post-procedure rejuvenation — adjusted daily by the attending practitioner
+            based on observed response.
+          </p>
+          <div className="grid sm:grid-cols-3 gap-3">
+            <div className="rounded-xl bg-[#F6F8F6] p-3">
+              <div className="text-[11px] text-[#8A9490] mb-0.5">Sessions completed</div>
+              <div className="font-[Fraunces] text-[18px] text-[#16302C]">{sessions.filter(s => s.status === "Completed").length} / {sessions.length || 6}</div>
+            </div>
+            <div className="rounded-xl bg-[#F6F8F6] p-3">
+              <div className="text-[11px] text-[#8A9490] mb-0.5">Next session</div>
+              <div className="font-[Fraunces] text-[18px] text-[#16302C]">{sessions.find(s => s.status === "Upcoming")?.time || "—"}</div>
+            </div>
+            <div className="rounded-xl bg-[#F6F8F6] p-3">
+              <div className="text-[11px] text-[#8A9490] mb-0.5">Status</div>
+              <div className="font-[Fraunces] text-[18px] text-[#16302C]">{p.status}</div>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      <Card>
+        <SectionTitle eyebrow="Recovery" title="Progress Tracking" />
+        <div className="h-[240px] -ml-3">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={data}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E4E9E6" />
+              <XAxis dataKey="day" tick={{ fontSize: 12, fill: "#5A6663" }} axisLine={false} tickLine={false} />
+              <YAxis domain={[0, 10]} tick={{ fontSize: 12, fill: "#5A6663" }} axisLine={false} tickLine={false} width={26} />
+              <Tooltip contentStyle={{ borderRadius: 10, border: "1px solid #E4E9E6", fontSize: 12.5 }} />
+              <Legend wrapperStyle={{ fontSize: 12.5 }} />
+              <Line type="monotone" dataKey="pain" name="Pain (0-10)" stroke="#C1622E" strokeWidth={2.5} dot={{ r: 3 }} />
+              <Line type="monotone" dataKey="mobility" name="Mobility (0-10)" stroke="#0F5C55" strokeWidth={2.5} dot={{ r: 3 }} />
+              <Line type="monotone" dataKey="sleep" name="Sleep quality (0-10)" stroke="#7C8FC4" strokeWidth={2.5} dot={{ r: 3 }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </Card>
+
+      <Card padded={false}>
+        <div className="p-5 pb-4"><SectionTitle eyebrow="Log" title="Session History" /></div>
+        <div className="divide-y divide-[#EEF1EF]">
+          {(sessions.length ? sessions : SCHEDULE.slice(0, 2)).map((s) => (
+            <div key={s.id} className="flex items-center gap-4 px-5 py-3">
+              <div className="w-14 shrink-0 font-[JetBrains_Mono] text-[12px] text-[#5A6663]">{s.time}</div>
+              <div className="min-w-0 flex-1">
+                <div className="text-[13.5px] font-semibold text-[#16302C]">{s.therapy}</div>
+                <div className="text-[12px] text-[#5A6663]">{s.therapist} · {s.room}</div>
+              </div>
+              <StatusPill status={s.status} />
+            </div>
+          ))}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+/* =============================== THERAPY PLANS =============================== */
+
+function TherapyPlans() {
+  const categories = ["Shodhana (Purification)", "Purvakarma (Preparatory)", "Specialized"];
+  return (
+    <div className="space-y-8">
+      {categories.map((cat) => (
+        <div key={cat}>
+          <SectionTitle eyebrow="Protocol Library" title={cat} />
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {THERAPY_PLANS.filter((t) => t.category === cat).map((t) => (
+              <Card key={t.id} className="flex flex-col">
+                <div className="flex items-start justify-between mb-2">
+                  <div>
+                    <h3 className="font-[Fraunces] text-[18px] text-[#16302C]">{t.name}</h3>
+                    <div className="text-[13px] text-[#8A9490]">{t.sanskrit}</div>
+                  </div>
+                  <div className="h-9 w-9 rounded-xl bg-[#DCEBE7] flex items-center justify-center shrink-0">
+                    <Leaf size={16} className="text-[#0F5C55]" />
+                  </div>
+                </div>
+                <p className="text-[12.5px] text-[#5A6663] leading-relaxed mb-4 flex-1">{t.description}</p>
+                <div className="flex items-center gap-4 text-[12px] text-[#3A4644] mb-3">
+                  <span className="flex items-center gap-1"><Clock size={13} /> {t.duration}</span>
+                  <span className="flex items-center gap-1"><Activity size={13} /> {t.sessions} sessions</span>
+                </div>
+                <div className="text-[11.5px] text-[#8A9490] border-t border-[#EEF1EF] pt-2.5">
+                  <span className="font-medium text-[#5A6663]">Indications:</span> {t.indications}
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* =============================== SCHEDULING =============================== */
+
+function Scheduling() {
+  const [showForm, setShowForm] = useState(false);
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-2 text-[13px] text-[#5A6663]">
+          <CalendarClock size={16} className="text-[#0F5C55]" />
+          <span className="font-medium text-[#16302C]">Thursday, August 13, 2026</span>
+        </div>
+        <button onClick={() => setShowForm(true)} className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#0F5C55] text-white text-[12.5px] font-semibold hover:bg-[#0A413C] transition-colors">
+          <Plus size={15} /> Schedule Session
+        </button>
+      </div>
+
+      <Card padded={false} className="overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-[13.5px]">
+            <thead>
+              <tr className="border-b border-[#E4E9E6] text-left text-[11.5px] uppercase tracking-wide text-[#8A9490]">
+                <th className="px-5 py-3 font-semibold">Time</th>
+                <th className="px-5 py-3 font-semibold">Patient</th>
+                <th className="px-5 py-3 font-semibold">Therapy</th>
+                <th className="px-5 py-3 font-semibold">Therapist</th>
+                <th className="px-5 py-3 font-semibold">Room</th>
+                <th className="px-5 py-3 font-semibold">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#EEF1EF]">
+              {SCHEDULE.map((s) => (
+                <tr key={s.id} className="hover:bg-[#F6F8F6] transition-colors">
+                  <td className="px-5 py-3.5 font-[JetBrains_Mono] text-[12.5px] text-[#3A4644]">{s.time}</td>
+                  <td className="px-5 py-3.5 font-semibold text-[#16302C]">{s.patient}</td>
+                  <td className="px-5 py-3.5 text-[#3A4644]">{s.therapy}</td>
+                  <td className="px-5 py-3.5 text-[#3A4644]">{s.therapist}</td>
+                  <td className="px-5 py-3.5 text-[#3A4644]">{s.room}</td>
+                  <td className="px-5 py-3.5"><StatusPill status={s.status} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
+      {showForm && <NewSessionModal onClose={() => setShowForm(false)} />}
+    </div>
+  );
+}
+
+function NewSessionModal({ onClose }) {
+  const [saved, setSaved] = useState(false);
+  return (
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-2xl w-full max-w-[440px] p-6 shadow-2xl">
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="font-[Fraunces] text-[20px] text-[#16302C]">Schedule Session</h3>
+          <button onClick={onClose} className="p-1 rounded-full hover:bg-black/5"><X size={18} /></button>
+        </div>
+        <p className="text-[12.5px] text-[#5A6663] mb-5">Demo form — new sessions aren't persisted.</p>
+        {saved ? (
+          <div className="flex flex-col items-center py-6 text-center">
+            <div className="h-12 w-12 rounded-full bg-[#DCEBE7] flex items-center justify-center mb-3"><CheckCircle2 size={22} className="text-[#0F5C55]" /></div>
+            <div className="font-semibold text-[#16302C] mb-1">Session scheduled</div>
+            <div className="text-[12.5px] text-[#5A6663]">This is a prototype — no data was saved.</div>
+            <button onClick={onClose} className="mt-5 px-4 py-2 rounded-xl bg-[#0F5C55] text-white text-[13px] font-semibold">Done</button>
+          </div>
+        ) : (
+          <form onSubmit={(e) => { e.preventDefault(); setSaved(true); }} className="space-y-3.5">
+            <div>
+              <label className="block text-[12px] font-medium text-[#3A4644] mb-1">Patient</label>
+              <select className="w-full rounded-lg border border-[#DCE3DF] px-3 py-2 text-[13px] outline-none focus:border-[#0F5C55]">
+                {PATIENTS.map((p) => <option key={p.id}>{p.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[12px] font-medium text-[#3A4644] mb-1">Therapy</label>
+              <select className="w-full rounded-lg border border-[#DCE3DF] px-3 py-2 text-[13px] outline-none focus:border-[#0F5C55]">
+                {THERAPY_PLANS.map((t) => <option key={t.id}>{t.name}</option>)}
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[12px] font-medium text-[#3A4644] mb-1">Therapist</label>
+                <select className="w-full rounded-lg border border-[#DCE3DF] px-3 py-2 text-[13px] outline-none focus:border-[#0F5C55]">
+                  {THERAPISTS.map((t) => <option key={t.id}>{t.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[12px] font-medium text-[#3A4644] mb-1">Room</label>
+                <select className="w-full rounded-lg border border-[#DCE3DF] px-3 py-2 text-[13px] outline-none focus:border-[#0F5C55]">
+                  {ROOMS.map((r) => <option key={r.id}>{r.name}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[12px] font-medium text-[#3A4644] mb-1">Date</label>
+                <input type="date" defaultValue={todayStr} className="w-full rounded-lg border border-[#DCE3DF] px-3 py-2 text-[13px] outline-none focus:border-[#0F5C55]" />
+              </div>
+              <div>
+                <label className="block text-[12px] font-medium text-[#3A4644] mb-1">Time</label>
+                <input type="time" defaultValue="16:00" className="w-full rounded-lg border border-[#DCE3DF] px-3 py-2 text-[13px] outline-none focus:border-[#0F5C55]" />
+              </div>
+            </div>
+            <button type="submit" className="w-full mt-2 rounded-xl bg-[#0F5C55] text-white text-[13.5px] font-semibold py-2.5 hover:bg-[#0A413C] transition-colors">
+              Confirm Session
+            </button>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* =============================== RESOURCES =============================== */
+
+function Resources() {
+  return (
+    <div className="space-y-8">
+      <div>
+        <SectionTitle eyebrow="Staffing" title="Therapist Availability" />
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {THERAPISTS.map((t) => (
+            <Card key={t.id} className="flex items-center gap-3.5">
+              <div className="h-11 w-11 rounded-full text-white text-[13px] font-semibold flex items-center justify-center shrink-0" style={{ background: t.avatarColor }}>
+                {t.name.replace("Dr. ", "").split(" ").map((n) => n[0]).join("")}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="font-semibold text-[#16302C] text-[13.5px] truncate">{t.name}</div>
+                <div className="text-[12px] text-[#5A6663] truncate">{t.specialty}</div>
+                <div className="text-[11px] text-[#8A9490] mt-0.5">{t.today} sessions today</div>
+              </div>
+              <StatusPill status={t.status} />
+            </Card>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <SectionTitle eyebrow="Facilities" title="Room Availability" />
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {ROOMS.map((r) => (
+            <Card key={r.id}>
+              <div className="flex items-start justify-between mb-2">
+                <div className="h-9 w-9 rounded-xl bg-[#F6F8F6] flex items-center justify-center"><DoorOpen size={16} className="text-[#0F5C55]" /></div>
+                <StatusPill status={r.status} />
+              </div>
+              <div className="font-semibold text-[#16302C] text-[13.5px] mb-0.5">{r.name}</div>
+              <div className="text-[12px] text-[#5A6663] mb-2">{r.type}</div>
+              <div className="text-[11.5px] text-[#8A9490] flex items-center gap-1"><MapPin size={12} /> {r.equipment}</div>
+            </Card>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* =============================== NOTIFICATIONS =============================== */
+
+function NotificationRow({ n }) {
+  const icons = { reminder: Clock, alert: AlertTriangle, info: Info };
+  const tints = { reminder: { bg: "#EFE6D2", fg: "#8A6A22" }, alert: { bg: "#F3DCD3", fg: "#9C4423" }, info: { bg: "#E3E8F2", fg: "#3F4F8C" } };
+  const Icon = icons[n.type];
+  const tint = tints[n.type];
+  return (
+    <div className="flex items-start gap-3.5 px-5 py-3.5">
+      <div className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: tint.bg }}>
+        <Icon size={16} style={{ color: tint.fg }} />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <div className="text-[13.5px] font-semibold text-[#16302C]">{n.title}</div>
+          {!n.read && <span className="h-1.5 w-1.5 rounded-full bg-[#C1622E]" />}
+        </div>
+        <div className="text-[12.5px] text-[#5A6663] mt-0.5">{n.body}</div>
+      </div>
+      <div className="text-[11px] text-[#8A9490] shrink-0 whitespace-nowrap">{n.time}</div>
+    </div>
+  );
+}
+
+function NotificationsView() {
+  const [filter, setFilter] = useState("All");
+  const filtered = NOTIFICATIONS.filter((n) => filter === "All" || n.type === filter.toLowerCase());
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        {["All", "Reminder", "Alert", "Info"].map((f) => (
+          <button key={f} onClick={() => setFilter(f)}
+            className={`px-3 py-1.5 rounded-full text-[12.5px] font-medium border transition-colors ${filter === f ? "bg-[#0F5C55] text-white border-[#0F5C55]" : "bg-white text-[#5A6663] border-[#DCE3DF] hover:border-[#0F5C55]/40"}`}>
+            {f}
+          </button>
+        ))}
+      </div>
+      <Card padded={false}>
+        <div className="divide-y divide-[#EEF1EF]">
+          {filtered.map((n) => <NotificationRow key={n.id} n={n} />)}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+/* =============================== PROGRESS TRACKING =============================== */
+
+function ProgressTracking({ openPatient }) {
+  const [selected, setSelected] = useState(PATIENTS[0].id);
+  const p = PATIENTS.find((x) => x.id === selected);
+  const data = PROGRESS[selected] || PROGRESS.default;
+  const latest = data[data.length - 1];
+  const first = data[0];
+
+  const deltas = [
+    { label: "Pain reduction", value: first.pain - latest.pain, suffix: "pts", positive: first.pain - latest.pain > 0 },
+    { label: "Mobility gain", value: latest.mobility - first.mobility, suffix: "pts", positive: latest.mobility - first.mobility > 0 },
+    { label: "Sleep improvement", value: latest.sleep - first.sleep, suffix: "pts", positive: latest.sleep - first.sleep > 0 },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap gap-2">
+        {PATIENTS.filter((x) => x.status !== "Completed" || x.id === selected).map((pt) => (
+          <button key={pt.id} onClick={() => setSelected(pt.id)}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[12.5px] font-medium border transition-colors ${selected === pt.id ? "bg-[#0F5C55] text-white border-[#0F5C55]" : "bg-white text-[#5A6663] border-[#DCE3DF] hover:border-[#0F5C55]/40"}`}>
+            {pt.name}
+          </button>
+        ))}
+      </div>
+
+      <div className="grid sm:grid-cols-3 gap-4">
+        {deltas.map((d) => (
+          <Card key={d.label}>
+            <div className="text-[12px] text-[#5A6663] mb-1">{d.label}</div>
+            <div className="font-[Fraunces] text-[26px] leading-none" style={{ color: d.positive ? "#0F5C55" : "#9C4423" }}>
+              {d.positive ? "+" : ""}{d.value} <span className="text-[14px] text-[#8A9490] font-[Inter]">{d.suffix}</span>
+            </div>
+          </Card>
+        ))}
+      </div>
+
+      <Card>
+        <div className="flex items-center justify-between mb-1">
+          <SectionTitle eyebrow={p.plan} title={`${p.name}'s Recovery Curve`} />
+          <button onClick={() => openPatient(p.id)} className="text-[12.5px] font-semibold text-[#0F5C55] flex items-center gap-1 hover:underline mb-4">
+            Full profile <ChevronRight size={14} />
+          </button>
+        </div>
+        <div className="h-[300px] -ml-3">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={data}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E4E9E6" />
+              <XAxis dataKey="day" tick={{ fontSize: 12, fill: "#5A6663" }} axisLine={false} tickLine={false} />
+              <YAxis domain={[0, 10]} tick={{ fontSize: 12, fill: "#5A6663" }} axisLine={false} tickLine={false} width={26} />
+              <Tooltip contentStyle={{ borderRadius: 10, border: "1px solid #E4E9E6", fontSize: 12.5 }} />
+              <Legend wrapperStyle={{ fontSize: 12.5 }} />
+              <Line type="monotone" dataKey="pain" name="Pain (0-10)" stroke="#C1622E" strokeWidth={2.5} dot={{ r: 3 }} />
+              <Line type="monotone" dataKey="mobility" name="Mobility (0-10)" stroke="#0F5C55" strokeWidth={2.5} dot={{ r: 3 }} />
+              <Line type="monotone" dataKey="sleep" name="Sleep quality (0-10)" stroke="#7C8FC4" strokeWidth={2.5} dot={{ r: 3 }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+/* =================================== ROOT =================================== */
+
+export default function App() {
+  const [authed, setAuthed] = useState(false);
+  const [user, setUser] = useState(null);
+  const [view, setView] = useState("dashboard");
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [activePatient, setActivePatient] = useState(null);
+
+  const unread = NOTIFICATIONS.filter((n) => !n.read).length;
+
+  const openPatient = (id) => { setActivePatient(id); setView("patient-profile"); };
+
+  const titles = {
+    dashboard: ["Good morning, Doctor", "Here's what's happening across the clinic today"],
+    patients: ["Patients", "Manage patient records and treatment status"],
+    plans: ["Therapy Plans", "Panchakarma protocol library"],
+    scheduling: ["Scheduling", "Today's therapy sessions across all rooms"],
+    resources: ["Therapists & Rooms", "Live staffing and facility availability"],
+    notifications: ["Notifications", "Reminders and clinical alerts"],
+    progress: ["Progress Tracking", "Recovery trends across active patients"],
+    "patient-profile": ["Patient Profile", null],
+  };
+
+  if (!authed) {
+    return (
+      <>
+        <link rel="stylesheet" href={FONTS_LINK} />
+        <LoginPage onLogin={(role) => {
+          setUser(role === "doctor" ? { name: "Dr. Meera Nair", role: "Panchakarma Lead", initials: "MN" } : { name: "Front Desk", role: "Administrator", initials: "FD" });
+          setAuthed(true);
+        }} />
+      </>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-[#FBFAF7] flex" style={{ fontFamily: "Inter, sans-serif" }}>
+      <link rel="stylesheet" href={FONTS_LINK} />
+      <Sidebar view={view} setView={setView} onLogout={() => setAuthed(false)} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} unread={unread} />
+      <div className="flex-1 min-w-0 flex flex-col">
+        <TopBar title={titles[view][0]} subtitle={titles[view][1]} onMenu={() => setMobileOpen(true)} user={user} unread={unread} setView={setView} />
+        <main className="flex-1 p-5 md:p-8 max-w-[1280px] w-full mx-auto">
+          {view === "dashboard" && <Dashboard setView={setView} openPatient={openPatient} />}
+          {view === "patients" && <PatientsList openPatient={openPatient} />}
+          {view === "patient-profile" && <PatientProfile patientId={activePatient} back={() => setView("patients")} />}
+          {view === "plans" && <TherapyPlans />}
+          {view === "scheduling" && <Scheduling />}
+          {view === "resources" && <Resources />}
+          {view === "notifications" && <NotificationsView />}
+          {view === "progress" && <ProgressTracking openPatient={openPatient} />}
+        </main>
+      </div>
+    </div>
+  );
+}
